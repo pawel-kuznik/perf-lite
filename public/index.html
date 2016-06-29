@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf8">
+        <title>
+            PerfLite
+        </title>
+        <meta name="author" content="Paweł Kuźnik">
+        <meta name="description" content="A lightweight javascript performance tester">
+        <link rel="stylesheet" href="/styles.css">
+        <template id="code-block">
+            <section class="code-block">
+                <input type="text" name="name" value="name goes here">
+                <span class="result"></span>
+                <textarea name="code">Code goes here</textarea>
+            </section>
+        </template>
+        <script src="https://code.jquery.com/jquery-3.0.0.slim.min.js" integrity="sha256-Rf4BadfyCtsvHmO89BUZcbYvNNvZvOT08ALfEzvCsD0=" crossorigin="anonymous"></script>
+        <script>
+            $(function () {
+
+                // helper function to show the results
+                var generateResults = function (results) {
+
+                    // empty out the results
+                    $('#results').empty();
+
+                    // the table
+                    var $table = $('<table>');
+
+                    // the header
+                    var $head = $('<thead>').appendTo($table);
+                   
+                    // the header
+                    $('<tr>')
+                        .append($('<th>').text('Code block'))
+                        .append($('<th>').text('Average time'))
+                        .appendTo($head);
+
+                    // the body
+                    var $body = $('<tbody>').appendTo($table);
+
+                    // iterate over the body and append the results
+                    for (var idx = 0; idx < results.length; ++idx) {
+
+                        // bring the result into local scope
+                        var result = results[idx];
+
+                        // add the result row
+                        $('<tr>')
+                            .append($('<td>').text(result.name))
+                            .append($('<td>').text(result.avg))
+                            .appendTo($body);
+                    }
+
+                    // append the results table
+                    $('#results').append($table);
+                };
+
+                // helper function to create code block
+                var generateCodeBlock = function () {
+                    $($('#code-block').html().trim()).appendTo('#workspace');
+                };
+
+                // generate 1st code block
+                generateCodeBlock();
+
+                // make handling of the add button
+                $('html button[data-action="add"]').on('click', function () {
+                    generateCodeBlock();
+                });
+
+                // install onclick handler 
+                $('html button[data-action="run"]').on('click', function () {
+
+                    // array that will hold results of tests 
+                    var results = [];
+
+                    // iterate over all sections inside the workspace
+                    $('#workspace > section').each(function (idx, elem) {
+
+                        // get data
+                        var $elem = $(elem),
+                            code = $elem.find('[name="code"]').val(),
+                            name = $elem.find('[name="name"]').val().trim(),
+                            times = [];
+
+                        //  cause the code could be broken
+                        try {
+
+                            // prepare the code to test
+                            var f = new Function (code);
+
+                            // execute code X times (so we can return avg value)
+                            for (var counter = 0; counter < 1000; ++counter) {
+
+                                var t = window.performance.now();
+                                f();
+                                times.push(window.performance.now() - t);
+                            }
+
+                            // push results
+                            results.push({
+                                name: '#' + idx + ' ' + name,
+                                avg: (times.reduce(function (a, b) { return a + b; }) / times.length),
+                                state: "pass"
+                            });
+                        }
+
+                        catch (error) {
+
+                            results.push({
+                                name: '#' + idx + ' ' + name,
+                                state: "fails"
+                            });
+                        }
+                    });
+
+                    // generate the results
+                    generateResults(results);
+                });
+            });
+        </script>
+    </head>
+    <body>
+        <section class="main">
+            <header>
+                <h1>
+                    PerfLite
+                </h1>
+                <div class="actions">
+                    <button data-action="add">Add code block</button>
+                    <button data-action="run">Run test</button>
+                </div>
+            </header>
+            <section id="workspace">
+            </section>
+            <section id="results">
+            </section>
+            <footer>
+                <p>
+                    Why this website? Cause jsperf was shut down. Yes, I know, you can get it on GitHub and host it. But, I feel that it has way too many dependencies (nvm, docker, MySQL). So, I made this one. A more lightweight version.
+                </p>
+            </footer>
+        <section>
+    </body>
+</html>
